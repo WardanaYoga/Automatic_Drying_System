@@ -1,78 +1,81 @@
+#include <Stepper.h>
 
-#define POWER_PIN 32  // ESP32's pin GPIO32 that provides the power to the rain sensor
-#define raindrop 13     // ESP32's pin GPIO13 connected to DO pin of the rain sensor
-#define ldrpin 12  // ESP32's pin GPIO13 connected to DO pin of the LDR module
-#define pinled 4
+#define raindrop 35     // ESP32's pin GPIO35 connected to DO pin of the rain sensor
+#define POWER_PIN 32    // ESP32's pin GPIO32 that provides the power to the rain sensor
+#define ldrpin 33       // ESP32's pin GPIO33 connected to DO pin of the LDR module
+#define pinled 25
+#define IN1 26
+#define IN2 27
+#define IN3 14
+#define IN4 12
 
 int lightState;
-int rain_state;
+int prevLightState = -1; // Menyimpan kondisi sebelumnya untuk sensor cahaya
+int rainState;
+int prevRainState = -1; // Menyimpan kondisi sebelumnya untuk sensor hujan
+
+Stepper stepper(2048, IN1, IN3, IN2, IN4); // Jumlah langkah: 2048 (motor 28BYJ-48)
 
 void setup() {
-  // initialize serial communication
   Serial.begin(115200);
-  // initialize the Arduino's pin as an input
-  pinMode(POWER_PIN, OUTPUT);  // configure the power pin pin as an OUTPUT
+  pinMode(POWER_PIN, OUTPUT);  // configure the power pin as an OUTPUT
   pinMode(raindrop, INPUT);
   pinMode(ldrpin, INPUT);
   pinMode(pinled, OUTPUT);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
 }
 
 void loop() {
-  lightState= digitalRead(ldrpin);
-  digitalWrite(POWER_PIN, HIGH);  // turn the rain sensor's power  ON
-  delay(10);                      // wait 10 milliseconds
-  rain_state = digitalRead(raindrop);
-  digitalWrite(POWER_PIN, LOW);  // turn the rain sensor's power OFF
+  lightState = digitalRead(ldrpin);
+  rainsensor();
 
-  /** if (rain_state == HIGH){
-    Serial.println("The rain is NOT detected");
-    Serial.println("=======");
-  }else{
-    Serial.println("The rain is detected");
-    Serial.println("=======");
+  if (lightState != prevLightState || rainState != prevRainState) {
+    handleCases();
+    prevLightState = lightState;
+    prevRainState = rainState;
   }
-  **/
-  kasus_1();
-  kasus_2();
-  kasus_3();
-  kasus_4();
-  delay(5000);  // pause for 1 sec to avoid reading sensors frequently to prolong the sensor lifetime
 }
 
-void kasus_1(){
-  if (lightState == LOW && rain_state == HIGH)
-  {
+void rainsensor() {
+  digitalWrite(POWER_PIN, HIGH);  // turn the rain sensor's power ON
+  delay(10);                      // wait 10 milliseconds
+  rainState = digitalRead(raindrop);
+  digitalWrite(POWER_PIN, LOW);   // turn the rain sensor's power OFF
+  delay(3000);                    // pause for 3 sec to avoid reading sensors frequently to prolong the sensor lifetime
+}
+
+void handleCases() {
+  if (lightState == LOW && rainState == HIGH) {
     Serial.println("Cuaca Cerah");
     Serial.println("...............");
     digitalWrite(pinled, LOW);
-    //kode motor...
-    delay(5000);
-  }
-}
-void kasus_2(){
-  if (lightState == LOW && rain_state == LOW)
-  {
+    stepper.setSpeed(10);  // Atur kecepatan motor
+    stepper.step(2048);    // Putar 2048 langkah (satu putaran)
+    stopMotor();
+  } else if (lightState == LOW && rainState == LOW) {
     Serial.println("Terang dan Cuaca Hujan");
     Serial.println("...............");
     digitalWrite(pinled, LOW);
-    delay(5000);
-  }
-}
-void kasus_3(){
-  if (lightState == HIGH && rain_state == HIGH)
-  {
-    Serial.println("Gelap dan Tidak Hujan");
+    stepper.setSpeed(10);  // Atur kecepatan motor
+    stepper.step(-2048);   // Putar 2048 langkah berlawanan arah jarum jam (satu putaran)
+    stopMotor();
+  } else if (lightState == HIGH) {
+    Serial.println("Gelap");
     Serial.println("...............");
     digitalWrite(pinled, HIGH);
-    delay(5000);
+    stepper.setSpeed(10);  // Atur kecepatan motor
+    stepper.step(-2048);   // Putar 2048 langkah berlawanan arah jarum jam (satu putaran)
+    stopMotor();
   }
 }
-void kasus_4(){
-  if (lightState == HIGH && rain_state == LOW)
-  {
-    Serial.println("Gelap dan Cuaca Hujan");
-    Serial.println("...............");
-    digitalWrite(pinled, HIGH);
-    delay(5000);
-  }
+
+// Fungsi untuk memberhentikan motor stepper
+void stopMotor() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
 }
