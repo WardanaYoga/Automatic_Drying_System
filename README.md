@@ -12,4 +12,10 @@ Bahan yang diperlukan adalah
 6. Kopi
 7. Music Hardcore
 8. hehe
-9. 
+
+Software yang saya pakai
+1. Arduino ide
+2. Blynk -> digunakan untuk mengirim pesan pada user secara realtime
+3. kuota
+4. Handphone/PC
+   
